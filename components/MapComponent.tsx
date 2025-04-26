@@ -36,50 +36,84 @@ interface MountainData {
 const fetchMountainDataFromAPI = async (serviceKey: string): Promise<MountainData[] | null> => {
   try {
     // 실제 API 요청을 보내는 코드
-    // const response = await fetch(
-    //   `https://apis.data.go.kr/1400000/service/cultureInfoService2/mntInfoOpenAPI?ServiceKey=${serviceKey}&searchWrd=한라산&numOfRows=10&pageNo=1`
-    // );
-    // const xmlData = await response.text();
-    // XML 파싱 로직이 필요함
+    const response = await fetch(
+      `https://apis.data.go.kr/1400000/service/cultureInfoService2/mntInfoOpenAPI?ServiceKey=${serviceKey}&searchWrd=한라산&numOfRows=10&pageNo=1`
+    );
+    const xmlData = await response.text();
+    console.log("산림청 API 응답:", xmlData);
     
-    // 더미 데이터 반환 (실제 API 연동 전까지 사용)
-    console.log("산림청 API 키:", serviceKey);
-    const dummyMountainData: MountainData[] = [
-      { 
-        id: 1, 
-        position: [33.3620, 126.5360], 
-        name: '한라산', 
-        height: 1947,
-        address: '제주특별자치도 서귀포시 토평동 산15-1'
-      },
-      { 
-        id: 2, 
-        position: [37.7407, 128.4456], 
-        name: '설악산', 
-        height: 1708,
-        address: '강원도 인제군 북면 한계리 산1-1'
-      },
-      { 
-        id: 3, 
-        position: [35.4736, 127.7308], 
-        name: '지리산', 
-        height: 1915,
-        address: '경상남도 산청군 시천면 중산리 산1'
-      },
-      { 
-        id: 4, 
-        position: [33.5205, 126.4911], 
-        name: '관음사(제주)', 
-        height: 950,
-        address: '제주특별자치도 제주시 아라동 산66-1'
-      }
-    ];
+    // 간단한 XML 파싱 (DOMParser 사용)
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlData, "text/xml");
+    const items = xmlDoc.getElementsByTagName("item");
     
-    return dummyMountainData;
+    if (items.length === 0) {
+      console.log("API 응답에 데이터가 없거나 형식이 맞지 않습니다. 더미 데이터를 사용합니다.");
+      return getDummyMountainData();
+    }
+    
+    // XML에서 데이터 추출
+    const mountainDataFromAPI: MountainData[] = [];
+    let id = 1;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const mntmnNm = item.getElementsByTagName("mntmnNm")[0]?.textContent || "";
+      const mntmnHg = item.getElementsByTagName("mntmnHg")[0]?.textContent || "0";
+      const mntmnLa = item.getElementsByTagName("mntmnLa")[0]?.textContent || "0";
+      const mntmnLo = item.getElementsByTagName("mntmnLo")[0]?.textContent || "0";
+      const mntmnAdr = item.getElementsByTagName("mntmnAdr")[0]?.textContent || "";
+      
+      mountainDataFromAPI.push({
+        id: id++,
+        position: [parseFloat(mntmnLa), parseFloat(mntmnLo)],
+        name: mntmnNm,
+        height: parseInt(mntmnHg),
+        address: mntmnAdr
+      });
+    }
+    
+    console.log("산림청 API 데이터 파싱 완료:", mountainDataFromAPI.length);
+    return mountainDataFromAPI.length > 0 ? mountainDataFromAPI : getDummyMountainData();
   } catch (error) {
     console.error("산 정보 데이터 API 호출 실패:", error);
-    return null;
+    return getDummyMountainData();
   }
+};
+
+// 더미 데이터 함수로 분리
+const getDummyMountainData = (): MountainData[] => {
+  console.log("더미 산 정보 데이터 사용");
+  return [
+    { 
+      id: 1, 
+      position: [33.3620, 126.5360], 
+      name: '한라산', 
+      height: 1947,
+      address: '제주특별자치도 서귀포시 토평동 산15-1'
+    },
+    { 
+      id: 2, 
+      position: [37.7407, 128.4456], 
+      name: '설악산', 
+      height: 1708,
+      address: '강원도 인제군 북면 한계리 산1-1'
+    },
+    { 
+      id: 3, 
+      position: [35.4736, 127.7308], 
+      name: '지리산', 
+      height: 1915,
+      address: '경상남도 산청군 시천면 중산리 산1'
+    },
+    { 
+      id: 4, 
+      position: [33.5205, 126.4911], 
+      name: '관음사(제주)', 
+      height: 950,
+      address: '제주특별자치도 제주시 아라동 산66-1'
+    }
+  ];
 };
 
 // 실제로는 여기서 Leaflet이나 다른 지도 API를 연동하게 됩니다

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardHeader from './DashboardHeader';
 import FilterPanel from './FilterPanel';
 import MapView from './MapView';
@@ -17,9 +17,35 @@ const API_KEYS = {
 };
 
 const WildfireDashboard = () => {
-  const [selectedDate, setSelectedDate] = useState('2025-04-23');
+  // 현재 날짜 가져오기
+  const getCurrentDateString = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getCurrentDateString());
   const [selectedRegion, setSelectedRegion] = useState('전체');
   const [selectedCause, setSelectedCause] = useState('전체');
+  const [currentDateTime, setCurrentDateTime] = useState('');
+
+  // 현재 날짜와 시간 업데이트
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const day = now.getDate();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      
+      const formattedDate = `${year}년 ${month}월 ${day}일 ${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+      setCurrentDateTime(formattedDate);
+    };
+    
+    updateDateTime();
+    const intervalId = setInterval(updateDateTime, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // 샘플 데이터
   const summary = {
@@ -32,7 +58,7 @@ const WildfireDashboard = () => {
   return (
     <div className="flex flex-col w-full bg-gray-50 p-4 text-gray-800">
       {/* 헤더 섹션 */}
-      <DashboardHeader lastUpdated="2025년 4월 23일 16:30" />
+      <DashboardHeader lastUpdated={currentDateTime} />
 
       {/* 메인 콘텐츠 영역 */}
       <div className="grid grid-cols-12 gap-4">
